@@ -67,6 +67,16 @@ int button3;
 int obstacleID;
 bool firstObstacle = true;
 
+// Operation
+int operationID;
+
+// Problem variables
+int num1;
+int num2;
+char operation;
+String problemText;
+int solution;
+
 Keypad keypad = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
 
 // Setup
@@ -78,7 +88,7 @@ void setup() {
   pinMode(button2Pin, INPUT_PULLUP);
   pinMode(button3Pin, INPUT_PULLUP);
   randomSeed(A3); // To randomize the numbers every different runtime
-  obstacleID = random(1, 4); // Start with a random obstacle
+  obstacleID = random(1, 5); // Start with a random obstacle
   lcd.init();
   lcd.backlight();
   Serial.begin(9600);
@@ -132,19 +142,16 @@ void launchMainMenu() {
 
 void generateRandomProblem() { // Generates a problem randomly
   char key = keypad.getKey();
-  int num1 = 4;
-  int num2 = 4;
-  char operation = '+';
-  String problemText = String(num1) + operation + String(num2) + " = ?";
-  int solution;
 
   if (!printedOnce) {
     lcd.clear();
     lcd.print("LEVEL " + String(level));
     delay(1000);
     lcd.clear();
-    lcd.print("4+4 = ?");
     printedOnce = true;
+    operation = getRandomOperation();
+    problemText = String(num1) + operation + String(num2) + " = ?";
+    lcd.print(problemText);
   }
 
   if (key) {
@@ -169,6 +176,13 @@ void generateRandomProblem() { // Generates a problem randomly
         keyInput = ""; // Clear keypad input for next question
       }
 
+    } else if (key == '-') {
+      lcd.clear();
+      lcd.print(problemText);
+      keyInput = String(keyInput.toInt() * -1); // Clears the input
+      lcd.setCursor(0,1);
+      lcd.print(keyInput);
+    
     } else {
       lcd.setCursor(0, 1);
       lcd.cursor();
@@ -181,10 +195,93 @@ void generateRandomProblem() { // Generates a problem randomly
 
 }
 
-char getRandomOperation(char operation) {
-  switch (operation) {
-    case '+': break;
-    default: break;
+char getRandomOperation() {
+  operationID = random(1,5);
+  switch(operationID) {
+    case 1:
+      if(level >= 5) {
+        num1 = random(50, 100);
+        num2 = random(50, 100);
+      } else if (level >= 8) {
+        num1 = random(133, 433);
+        num2 = random(422, 699);
+      } else {
+        num1 = random(1, 100);
+        num2 = random(1, 100);
+      }
+      return '+';
+    case 2:
+      if(level >= 5) {
+        num1 = random(50, 100);
+        num2 = random(50, 100);
+      } else if (level >= 8) {
+        num1 = random(244, 699);
+        num2 = random(142, 333);
+      } else {
+        num1 = random(1, 100);
+        num2 = random(1, 100);
+      }
+      return '-';
+    case 3:
+      if(level >= 5 && level < 8) {
+        num1 = random(2, 10);
+        num2 = random(50, 100);
+      } else if (level >= 8) {
+        num1 = random(50, 150);
+        num2 = random(50, 250);
+      } else if (level < 5 && level >= 3) {
+        num1 = random(2, 17);
+        num2 = random(2, 25);
+      } else {
+        num1 = random(2, 10);
+        num2 = random(2, 10);
+      }
+      return '*';
+    case 4:
+      switch(level) { // Random is bad for division because of decimals. Difficulty linearly scales up.
+        case 1:
+          num1 = 6;
+          num2 = 3;
+          break;
+        case 2:
+          num1 = 15;
+          num2 = 3;
+          break;
+        case 3:
+          num1 = 36;
+          num2 = 6;
+          break;
+        case 4:
+          num1 = 72;
+          num2 = 6;
+          break;
+        case 5:
+          num1 = 304;
+          num2 = 8;
+          break;
+        case 6:
+          num1 = 63;
+          num2 = 9;
+          break;
+        case 7:
+          num1 = 312;
+          num2 = 6;
+          break;
+        case 8:
+          num1 = 288;
+          num2 = 6;
+          break;
+        case 9:
+          num1 = 473;
+          num2 = 11;
+          break;
+        case 10:
+          num1 = 627;
+          num2 = 11;
+          break;
+        
+      }
+      return '/';
   }
 }
 
