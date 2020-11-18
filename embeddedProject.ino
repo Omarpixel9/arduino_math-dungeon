@@ -50,7 +50,7 @@ int potentioInitial = -1;
 bool targetSet = false;
 
 // Touch setup
-int touchPin = 12;
+int touchPin = 10;
 int touchValue;
 int pressCounter;
 long touchTarget;
@@ -63,6 +63,10 @@ int button1;
 int button2;
 int button3;
 
+// Obstacle ID
+int obstacleID;
+bool firstObstacle = true;
+
 Keypad keypad = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
 
 // Setup
@@ -74,6 +78,7 @@ void setup() {
   pinMode(button2Pin, INPUT_PULLUP);
   pinMode(button3Pin, INPUT_PULLUP);
   randomSeed(A3); // To randomize the numbers every different runtime
+  obstacleID = random(1, 4); // Start with a random obstacle
   lcd.init();
   lcd.backlight();
   Serial.begin(9600);
@@ -89,8 +94,16 @@ void loop() {
       delay(1000);
       lcd.clear();
       printedOnce = true;
-    }
-    stuckInObstacle();
+      if (!firstObstacle) {
+        if(obstacleID == 4) {
+          obstacleID = 1;
+        } else {
+          obstacleID += 1;
+        }
+
+      }
+  }
+  stuckInObstacle();
   }
   delay(10);
 }
@@ -197,10 +210,24 @@ int getArithmeticProblemSolution(int num1, int num2, char operation) {
   return solution;
 }
 
+
+// 1 for Temperature
+// 2 for Touch
+// 3 for HoldButtons
+// 4 for Potentiometer
 void stuckInObstacle() { // Makes player stuck in an in-between obstacle
-  switch (level) {
-    default:
+  switch (obstacleID) {
+    case 1:
+      temperatureObstacle();
+      break;
+    case 2:
+      touchObstacle();
+      break;
+    case 3:
       holdObstacle();
+      break;
+    default:
+      potentiometerObstacle();
       break;
   }
 
@@ -234,6 +261,7 @@ void temperatureObstacle() { // The code segment that starts receiving the tempe
       lcd.print("Obstacle Cleared");
       delay(1000);
       lcd.clear();
+      firstObstacle = false;
     } else {
       temperature = newTemperature;
     }
@@ -276,6 +304,7 @@ void potentiometerObstacle() { // Obstacle that checks if player rotated knob al
     lcd.print("Obstacle Cleared");
     delay(1000);
     lcd.clear();
+    firstObstacle = false;
   }
 
 
@@ -319,6 +348,7 @@ void touchObstacle() { // Touch X amount of times to clear the obstacle
 
     lcd.clear();
     lcd.print("Obstacle Cleared");
+    firstObstacle = false;
   }
 
 }
@@ -346,6 +376,7 @@ void holdObstacle() { // Obstacle that checks for holding 3 buttons for X amount
       currentlyInObstacle = false; // Reset to exit obstacle
       printedOnce = false; // Reset to print obstacle text
       secondPrintFlag = false; // Ready to print second obstacle text
+      firstObstacle = false;
     } else {
       lcd.clear();
       lcd.print("Try again.");
