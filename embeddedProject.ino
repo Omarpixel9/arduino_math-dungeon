@@ -24,6 +24,7 @@ bool printedOnce = false; // Used to print LCD only once
 bool secondPrintFlag = false;
 String keyInput = ""; // To buffer multiple entered keys
 int level = 1; // Keep track of what level the player is in
+int finalLevel = 10; // Final level. EXAMPLE: if(level=finalLevel+1) -> player wins
 
 // Obstacle flags
 bool currentlyInObstacle = false;
@@ -77,6 +78,14 @@ char operation;
 String problemText;
 int solution;
 
+//In-game timer
+bool atStartOfGame = true; // To record program runtime at start of game
+bool atHalfOfGame = false;
+unsigned long initialTime; // Records time at beginning of game
+unsigned long currentTime; // Records current time;
+unsigned long timeChange;
+unsigned long timeLimit = 180000; // Time limit in milliseconds (ms)
+
 Keypad keypad = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
 
 // Setup
@@ -87,7 +96,7 @@ void setup() {
   pinMode(button1Pin, INPUT_PULLUP);
   pinMode(button2Pin, INPUT_PULLUP);
   pinMode(button3Pin, INPUT_PULLUP);
-  randomSeed(A3); // To randomize the numbers every different runtime
+  randomSeed(random(2,3)); // To randomize the numbers every different runtime
   obstacleID = random(1, 5); // Start with a random obstacle
   lcd.init();
   lcd.backlight();
@@ -97,6 +106,32 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
+  if(atStartOfGame) {
+    initialTime = millis();
+    atStartOfGame = false;
+  }
+  currentTime = millis();
+  timeChange = currentTime - initialTime;
+  Serial.println(String(timeChange)+"ms");
+  
+  if(timeChange >= timeLimit) {
+    lcd.clear();
+    lcd.print("Time's up!");
+    lcd.setCursor(0,1);
+    lcd.print("GAME OVER");
+    delay(3000);
+    lcd.clear();
+    lcd.print("FINAL SCORE");
+    lcd.setCursor(0,1);
+    lcd.print("Score="+String(level)+"/"+String(finalLevel));
+    while(true) {
+      void(); // To stop the program
+    }
+    
+  } else if (timeChange >= timeLimit/2 && !atHalfOfGame) {
+    atHalfOfGame = true;
+    Serial.println("Half time passed");
+  }
   generateRandomProblem();
   while (currentlyInObstacle) {
     if (!printedOnce) {
@@ -115,7 +150,7 @@ void loop() {
   }
   stuckInObstacle();
   }
-  delay(10);
+  //delay(10);
 }
 
 void launchMainMenu() {
@@ -162,7 +197,6 @@ void generateRandomProblem() { // Generates a problem randomly
       lcd.noCursor();
     } else if (key == '#') {
       solution = getArithmeticProblemSolution(num1, num2, operation);
-      Serial.print(solution);
       if (keyInput.toInt() == solution) { // Checks user input against solution
         lcd.clear();
         lcd.print("Good job!");
@@ -341,7 +375,6 @@ void temperatureObstacle() { // The code segment that starts receiving the tempe
     initialTemperature = newTemperature;
     initialTempSet = true;
   }
-  Serial.print(newTemperature - temperature);
 
   if (newTemperature - temperature > 0) {
     lcd.print("RUB TO 5%");
@@ -380,7 +413,6 @@ void potentiometerObstacle() { // Obstacle that checks if player rotated knob al
       potentioTarget = potentioOutput / 2;
     }
     lcd.print("ROTATE to " + String((potentioTarget / 255.0) * 100) + "%");
-    Serial.print("im here");
     secondPrintFlag = true;
   }
 
@@ -389,7 +421,6 @@ void potentiometerObstacle() { // Obstacle that checks if player rotated knob al
     lcd.setCursor(0, 1);
     lcd.print(String((potentioOutput / 255.0) * 100) + "%");
     lcd.setCursor(0, 0);
-    Serial.println(potentioInitial);
   }
 
   if (potentioOutput == potentioTarget) {
@@ -406,7 +437,6 @@ void potentiometerObstacle() { // Obstacle that checks if player rotated knob al
 
 
 
-  Serial.println(potentioOutput);
   delay(2);
 }
 
@@ -491,7 +521,6 @@ void microphoneObstacle() { // Obstacle that checks for a microphone sound
     secondPrintFlag = true;
   }
   micInput = digitalRead(micPin); // Reads from microphone
-  Serial.println(micInput, DEC);
   if (micInput == LOW) { // Checks if sound is above threshold
     lcd.clear();
     lcd.print("CLAP DETECTED!");
