@@ -23,7 +23,7 @@ byte colPins[COLS] = {9, 8, 7, 6}; //connect to the column pinouts of the keypad
 bool printedOnce = false; // Used to print LCD only once
 bool secondPrintFlag = false;
 String keyInput = ""; // To buffer multiple entered keys
-int level = 1; // Keep track of what level the player is in
+int level = 11; // Keep track of what level the player is in
 int finalLevel = 10; // Final level. EXAMPLE: if(level=finalLevel+1) -> player wins
 
 // Obstacle flags
@@ -96,7 +96,7 @@ void setup() {
   pinMode(button1Pin, INPUT_PULLUP);
   pinMode(button2Pin, INPUT_PULLUP);
   pinMode(button3Pin, INPUT_PULLUP);
-  randomSeed(random(2,3)); // To randomize the numbers every different runtime
+  randomSeed(random(2, 3)); // To randomize the numbers every different runtime
   obstacleID = random(1, 5); // Start with a random obstacle
   lcd.init();
   lcd.backlight();
@@ -106,29 +106,40 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-  if(atStartOfGame) {
+  if (level == finalLevel + 1) {
+    winGameScreen();
+  }
+  if (atStartOfGame) {
     initialTime = millis();
     atStartOfGame = false;
   }
   currentTime = millis();
   timeChange = currentTime - initialTime;
-  Serial.println(String(timeChange)+"ms");
-  
-  if(timeChange >= timeLimit) {
+  Serial.println(String(timeChange) + "ms");
+
+  if (timeChange >= timeLimit) {
     lcd.clear();
     lcd.print("Time's up!");
-    lcd.setCursor(0,1);
+    lcd.setCursor(0, 1);
     lcd.print("GAME OVER");
     delay(3000);
     lcd.clear();
     lcd.print("FINAL SCORE");
-    lcd.setCursor(0,1);
-    lcd.print("Score="+String(level)+"/"+String(finalLevel));
-    while(true) {
+    lcd.setCursor(0, 1);
+    lcd.print("You can do it");
+    delay(1000);
+    lcd.setCursor(0, 1);
+    lcd.print("Score=" + String(level) + "/" + String(finalLevel));
+    delay(10000);
+    lcd.clear();
+    lcd.print("Reset To");
+    lcd.setCursor(0, 1);
+    lcd.print("Try Again :)");
+    while (true) {
       void(); // To stop the program
     }
-    
-  } else if (timeChange >= timeLimit/2 && !atHalfOfGame) {
+
+  } else if (timeChange >= timeLimit / 2 && !atHalfOfGame) {
     atHalfOfGame = true;
     Serial.println("Half time passed");
   }
@@ -140,17 +151,71 @@ void loop() {
       lcd.clear();
       printedOnce = true;
       if (!firstObstacle) {
-        if(obstacleID == 4) {
+        if (obstacleID == 4) {
           obstacleID = 1;
         } else {
           obstacleID += 1;
         }
 
       }
-  }
-  stuckInObstacle();
+    }
+    stuckInObstacle();
   }
   //delay(10);
+}
+
+void winGameScreen() { // The screen that shows up if the Player wins
+
+  byte heart[8] = {
+    B00000,
+    B01010,
+    B11111,
+    B11111,
+    B11111,
+    B11111,
+    B01110,
+    B00100
+  };
+
+  char text1[] = "THANK YOU ";
+  char text2[] = "4 PLAYING ";
+
+  lcd.clear();
+  lcd.print("YOU WON! :D");
+  lcd.setCursor(0, 1);
+  lcd.print("CONGRATULATIONS!");
+  // delay(3000);
+  lcd.clear();
+  lcd.print("Time taken:");
+  //delay(1500);
+  lcd.setCursor(0, 1);
+  lcd.print(String(timeChange / 1000) + "s/" + String(timeLimit / 1000) + "s");
+  //delay(4000);
+  lcd.clear();
+  lcd.createChar(0, heart);
+  lcd.setCursor(0,0);
+
+  while (true) {
+    for (int i = 0; i < sizeof(text1); i++) {
+      lcd.print(text1[i]);
+      delay(250);
+    }
+    for (int i = 0; i < 5; i++) {
+      lcd.write(0);
+      delay(250);
+    }
+    lcd.setCursor(0, 1);
+    for (int i = 0; i < sizeof(text2); i++) {
+      lcd.print(text2[i]);
+      delay(250);
+    }
+    for (int i = 0; i < 5; i++) {
+      lcd.write(0);
+      delay(250);
+    }
+    delay(1500);
+    lcd.clear();
+  }
 }
 
 void launchMainMenu() {
@@ -214,9 +279,9 @@ void generateRandomProblem() { // Generates a problem randomly
       lcd.clear();
       lcd.print(problemText);
       keyInput = String(keyInput.toInt() * -1); // Clears the input
-      lcd.setCursor(0,1);
+      lcd.setCursor(0, 1);
       lcd.print(keyInput);
-    
+
     } else {
       lcd.setCursor(0, 1);
       lcd.cursor();
@@ -230,10 +295,10 @@ void generateRandomProblem() { // Generates a problem randomly
 }
 
 char getRandomOperation() {
-  operationID = random(1,5);
-  switch(operationID) {
+  operationID = random(1, 5);
+  switch (operationID) {
     case 1:
-      if(level >= 5) {
+      if (level >= 5) {
         num1 = random(50, 100);
         num2 = random(50, 100);
       } else if (level >= 8) {
@@ -245,7 +310,7 @@ char getRandomOperation() {
       }
       return '+';
     case 2:
-      if(level >= 5) {
+      if (level >= 5) {
         num1 = random(50, 100);
         num2 = random(50, 100);
       } else if (level >= 8) {
@@ -257,7 +322,7 @@ char getRandomOperation() {
       }
       return '-';
     case 3:
-      if(level >= 5 && level < 8) {
+      if (level >= 5 && level < 8) {
         num1 = random(2, 10);
         num2 = random(50, 100);
       } else if (level >= 8) {
@@ -272,7 +337,7 @@ char getRandomOperation() {
       }
       return '*';
     case 4:
-      switch(level) { // Random is bad for division because of decimals. Difficulty linearly scales up.
+      switch (level) { // Random is bad for division because of decimals. Difficulty linearly scales up.
         case 1:
           num1 = 6;
           num2 = 3;
@@ -313,7 +378,7 @@ char getRandomOperation() {
           num1 = 627;
           num2 = 11;
           break;
-        
+
       }
       return '/';
   }
