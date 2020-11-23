@@ -1,3 +1,24 @@
+/*
+ * By Omar Ahmad
+ * Last updated on November 23rd 2020
+ * ==THE CODE==
+ * The code is divided into functions to keep it relatively modular. It might look long
+ * and complicated - this is why I have added comments to help with this. The code starts
+ * with keeping the player in the main menu [launchMainMenu() function]. Once the player presses the START button, it
+ * goes into the loop() function
+ * ==HOW TO PLAY==
+ * Use keypad to solve the problems and the other sensors to overcome obstacles
+ * Press '*' to CLEAR solution, Press '#' to SUBMIT solution, and press A/B/C/D to REVERSE SIGN of input
+ * You go through level by level until you reach the end. Between each level is an obstacle (sensor minigame).
+ * The problems are randomly generated, some might be difficult and may need pen and paper
+ * Higher level problems might need knowledge of Long Division
+ * --Obstacles--
+ * The potentiometer needs to be held and turned around
+ * Temperature sensor needs friction on it to heat up (Rubbing it)
+ * Touch sensor is simply tapping on it for X amount of times
+ * Buttons you need to hold UNTIL it tells you obstacle is clear
+ */
+
 #include <Keypad.h>
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
@@ -37,10 +58,6 @@ double temperature = 0;
 double newTemperature;
 double initialTemperature;
 bool initialTempSet = false;
-
-// Microphone setup
-int micPin = 10;
-int micInput;
 
 // Potentiometer setup
 int potentiometerPin = A1;
@@ -84,14 +101,14 @@ bool atHalfOfGame = false;
 unsigned long initialTime; // Records time at beginning of game
 unsigned long currentTime; // Records current time;
 unsigned long timeChange;
-unsigned long timeLimit = 240000; // Time limit in milliseconds (ms)
+unsigned long timeLimit = 1; // Time limit in milliseconds (ms)
+unsigned long previousTime; // This is used to show the time every second in Serial monitor
 
 Keypad keypad = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
 
 // Setup
 void setup() {
   // put your setup code here, to run once:
-  pinMode(micPin, INPUT);
   pinMode(touchPin, INPUT);
   pinMode(button1Pin, INPUT_PULLUP);
   pinMode(button2Pin, INPUT_PULLUP);
@@ -109,26 +126,30 @@ void setup() {
 // Loop
 void loop() {
   // put your main code here, to run repeatedly:
-  if (level == finalLevel + 1) {
-    winGameScreen();
-  }
   if (atStartOfGame) {
     initialTime = millis();
+    previousTime = initialTime;
     atStartOfGame = false;
   }
   currentTime = millis();
-  timeChange = currentTime - initialTime;
-  Serial.println(String(timeChange) + "ms");
+  timeChange = currentTime - initialTime; // Elapsed time since game started
+  if(currentTime - previousTime >= 1000) {
+    previousTime = currentTime;
+    Serial.println("Countdown: " + String((timeLimit - timeChange) / 1000) + "s");
+  }
 
   if (timeChange >= timeLimit) {
     loseGameScreen();
   } else if (timeChange >= timeLimit / 2 && !atHalfOfGame) {
     atHalfOfGame = true;
-    Serial.println("Half time passed");
+    Serial.println("***HALF TIME PASSED***");
   }
-  
+
   generateRandomProblem();
-  
+  if (level == finalLevel + 1) {
+    winGameScreen();
+  }
+
   while (currentlyInObstacle) {
     if (!printedOnce) {
       lcd.print("Obstacle Alert");
@@ -151,7 +172,7 @@ void loop() {
 
 void winGameScreen() { // The screen that shows up if the Player wins
 
-  byte heart[8] = {
+  byte heart[8] = { // The heart custom character definition
     B00000,
     B01010,
     B11111,
@@ -169,13 +190,13 @@ void winGameScreen() { // The screen that shows up if the Player wins
   lcd.print("YOU WON! :D");
   lcd.setCursor(0, 1);
   lcd.print("CONGRATULATIONS!");
-  // delay(3000);
+  delay(3000);
   lcd.clear();
   lcd.print("Time taken:");
-  //delay(1500);
+  delay(1500);
   lcd.setCursor(0, 1);
   lcd.print(String(timeChange / 1000) + "s/" + String(timeLimit / 1000) + "s");
-  //delay(4000);
+  delay(4000);
   lcd.clear();
   lcd.createChar(0, heart);
   lcd.setCursor(0, 0);
@@ -213,10 +234,12 @@ void loseGameScreen() { // If the player loses, this runs
   lcd.print("FINAL SCORE");
   lcd.setCursor(0, 1);
   lcd.print("You can do it");
-  delay(1000);
+  delay(2000);
+  lcd.clear();
+  lcd.print("FINAL SCORE");
   lcd.setCursor(0, 1);
   lcd.print("Score=" + String(level) + "/" + String(finalLevel));
-  delay(10000);
+  delay(6000);
   lcd.clear();
   lcd.print("Reset To");
   lcd.setCursor(0, 1);
@@ -226,7 +249,7 @@ void loseGameScreen() { // If the player loses, this runs
   }
 }
 
-void launchMainMenu() {
+void launchMainMenu() { // Keeps player in main menu
   lcd.clear();
   char text[] = "Press 1 to Play ";
   lcd.setCursor(16, 0);
@@ -274,7 +297,6 @@ void generateRandomProblem() { // Generates a problem randomly
         lcd.clear();
         lcd.print("Good job!");
         lcd.noCursor();
-        // **==Play Buzzer Sound Here==**
         delay(1500);
         lcd.clear();
         level++;
@@ -305,46 +327,46 @@ void generateRandomProblem() { // Generates a problem randomly
 char getRandomOperation() {
   operationID = random(1, 5);
   switch (operationID) {
-    case 1:
+    case 1: // Addition
       if (level >= 5) {
-        num1 = random(50, 100);
-        num2 = random(50, 100);
-      } else if (level >= 8) {
+        num1 = random(50, 101);
+        num2 = random(50, 101);
+      } else if (level >= 7) {
         num1 = random(133, 433);
-        num2 = random(422, 699);
+        num2 = random(422, 701);
       } else {
-        num1 = random(1, 100);
+        num1 = random(1, 101);
         num2 = random(1, 100);
       }
       return '+';
-    case 2:
+    case 2: // Subtraction
       if (level >= 5) {
-        num1 = random(50, 100);
-        num2 = random(50, 100);
-      } else if (level >= 8) {
-        num1 = random(244, 699);
+        num1 = random(50, 101);
+        num2 = random(50, 101);
+      } else if (level >= 7) {
+        num1 = random(244, 701);
         num2 = random(142, 333);
       } else {
-        num1 = random(1, 100);
-        num2 = random(1, 100);
+        num1 = random(1, 101);
+        num2 = random(1, 101);
       }
       return '-';
-    case 3:
-      if (level >= 5 && level < 8) {
-        num1 = random(2, 10);
-        num2 = random(50, 100);
-      } else if (level >= 8) {
+    case 3: // Multiplication
+      if (level >= 5 && level < 7) {
+        num1 = random(5, 51);
+        num2 = random(50, 121);
+      } else if (level >= 7) {
         num1 = random(50, 150);
         num2 = random(50, 250);
       } else if (level < 5 && level >= 3) {
-        num1 = random(2, 17);
-        num2 = random(2, 25);
+        num1 = random(5, 51);
+        num2 = random(5, 51);
       } else {
         num1 = random(2, 10);
         num2 = random(2, 10);
       }
       return '*';
-    case 4:
+    case 4: // Division
       switch (level) { // Random is bad for division because of decimals. Difficulty linearly scales up.
         case 1:
           num1 = 6;
@@ -392,7 +414,7 @@ char getRandomOperation() {
   }
 }
 
-int getArithmeticProblemSolution(int num1, int num2, char operation) {
+int getArithmeticProblemSolution(int num1, int num2, char operation) { // Gets the solution for a given operation
   int solution;
   switch (operation) {
     case '+':
@@ -417,8 +439,8 @@ int getArithmeticProblemSolution(int num1, int num2, char operation) {
 
 // 1 for Temperature
 // 2 for Touch
-// 3 for HoldButtons
-// 4 for Potentiometer
+// 3 for Potentiometer
+// 4 for Hold Buttons
 void stuckInObstacle() { // Makes player stuck in an in-between obstacle
   switch (obstacleID) {
     case 1:
@@ -440,22 +462,19 @@ void stuckInObstacle() { // Makes player stuck in an in-between obstacle
 void temperatureObstacle() { // The code segment that starts receiving the temperature
   temperatureInput = analogRead(temperaturePin);
   newTemperature = temperatureInput;
-  /*newTemperature = (double) temperatureInput / 1024;
-    newTemperature = newTemperature * 5;
-    newTemperature = newTemperature - 0.5;
-    newTemperature = newTemperature * 100;*/
+  
   if (!initialTempSet) {
     initialTemperature = newTemperature;
     initialTempSet = true;
   }
 
   if (newTemperature - temperature > 0) {
-    lcd.print("RUB TO ");
+    lcd.print("RUB TO 5%");
     lcd.setCursor(0, 1);
     lcd.print("Change=" + String(newTemperature - initialTemperature) + "%");
     lcd.setCursor(0, 0);
 
-    if (newTemperature - initialTemperature >= 6) {
+    if (newTemperature - initialTemperature >= 5) {
       currentlyInObstacle = false; // Reset to
       printedOnce = false; // Reset to print obstacle text
       temperature = 0;
