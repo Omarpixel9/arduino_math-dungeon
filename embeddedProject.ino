@@ -101,7 +101,7 @@ bool atHalfOfGame = false;
 unsigned long initialTime; // Records time at beginning of game
 unsigned long currentTime; // Records current time;
 unsigned long timeChange;
-unsigned long timeLimit = 1; // Time limit in milliseconds (ms)
+unsigned long timeLimit = 360000; // Time limit in milliseconds (ms)
 unsigned long previousTime; // This is used to show the time every second in Serial monitor
 
 Keypad keypad = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
@@ -116,7 +116,7 @@ void setup() {
   lcd.init();
   lcd.backlight();
   Serial.begin(9600);
-  randomSeed(analogRead(A3)); // To randomize the numbers every different runtime
+  randomSeed(analogRead(A0)); // To randomize the numbers every different runtime
   obstacleID = random(1, 5); // Start with a random obstacle
   launchMainMenu();
 
