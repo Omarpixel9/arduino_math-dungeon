@@ -7,8 +7,8 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);
 
 // Configuring Keypad using keypad library
 const byte ROWS = 4; //four rows
-const byte COLS = 4; //three columns
-char keys[ROWS][COLS] = {
+const byte COLS = 4; //four columns
+char keys[ROWS][COLS] = { // The right hand side of the keypad reverses the sign of the user's input
   {'1', '2', '3', '-'},
   {'4', '5', '6', '-'},
   {'7', '8', '9', '-'},
@@ -23,7 +23,7 @@ byte colPins[COLS] = {9, 8, 7, 6}; //connect to the column pinouts of the keypad
 bool printedOnce = false; // Used to print LCD only once
 bool secondPrintFlag = false;
 String keyInput = ""; // To buffer multiple entered keys
-int level = 11; // Keep track of what level the player is in
+int level = 1; // Keep track of what level the player is in (Start at 1)
 int finalLevel = 10; // Final level. EXAMPLE: if(level=finalLevel+1) -> player wins
 
 // Obstacle flags
@@ -50,10 +50,10 @@ int potentioTarget; // Target for player to reach
 int potentioInitial = -1;
 bool targetSet = false;
 
-// Touch setup
+// Touch sensor setup
 int touchPin = 10;
 int touchValue;
-int pressCounter;
+int pressCounter; // Counts how many presses on the sensor
 long touchTarget;
 
 // HOLD buttons confiugration
@@ -84,7 +84,7 @@ bool atHalfOfGame = false;
 unsigned long initialTime; // Records time at beginning of game
 unsigned long currentTime; // Records current time;
 unsigned long timeChange;
-unsigned long timeLimit = 180000; // Time limit in milliseconds (ms)
+unsigned long timeLimit = 240000; // Time limit in milliseconds (ms)
 
 Keypad keypad = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
 
@@ -96,14 +96,17 @@ void setup() {
   pinMode(button1Pin, INPUT_PULLUP);
   pinMode(button2Pin, INPUT_PULLUP);
   pinMode(button3Pin, INPUT_PULLUP);
-  randomSeed(random(2, 3)); // To randomize the numbers every different runtime
-  obstacleID = random(1, 5); // Start with a random obstacle
   lcd.init();
   lcd.backlight();
   Serial.begin(9600);
+  randomSeed(analogRead(A3)); // To randomize the numbers every different runtime
+  obstacleID = random(1, 5); // Start with a random obstacle
+  launchMainMenu();
+
 
 }
 
+// Loop
 void loop() {
   // put your main code here, to run repeatedly:
   if (level == finalLevel + 1) {
@@ -118,32 +121,14 @@ void loop() {
   Serial.println(String(timeChange) + "ms");
 
   if (timeChange >= timeLimit) {
-    lcd.clear();
-    lcd.print("Time's up!");
-    lcd.setCursor(0, 1);
-    lcd.print("GAME OVER");
-    delay(3000);
-    lcd.clear();
-    lcd.print("FINAL SCORE");
-    lcd.setCursor(0, 1);
-    lcd.print("You can do it");
-    delay(1000);
-    lcd.setCursor(0, 1);
-    lcd.print("Score=" + String(level) + "/" + String(finalLevel));
-    delay(10000);
-    lcd.clear();
-    lcd.print("Reset To");
-    lcd.setCursor(0, 1);
-    lcd.print("Try Again :)");
-    while (true) {
-      void(); // To stop the program
-    }
-
+    loseGameScreen();
   } else if (timeChange >= timeLimit / 2 && !atHalfOfGame) {
     atHalfOfGame = true;
     Serial.println("Half time passed");
   }
+  
   generateRandomProblem();
+  
   while (currentlyInObstacle) {
     if (!printedOnce) {
       lcd.print("Obstacle Alert");
@@ -193,7 +178,7 @@ void winGameScreen() { // The screen that shows up if the Player wins
   //delay(4000);
   lcd.clear();
   lcd.createChar(0, heart);
-  lcd.setCursor(0,0);
+  lcd.setCursor(0, 0);
 
   while (true) {
     for (int i = 0; i < sizeof(text1); i++) {
@@ -218,6 +203,29 @@ void winGameScreen() { // The screen that shows up if the Player wins
   }
 }
 
+void loseGameScreen() { // If the player loses, this runs
+  lcd.clear();
+  lcd.print("Time's up!");
+  lcd.setCursor(0, 1);
+  lcd.print("GAME OVER");
+  delay(3000);
+  lcd.clear();
+  lcd.print("FINAL SCORE");
+  lcd.setCursor(0, 1);
+  lcd.print("You can do it");
+  delay(1000);
+  lcd.setCursor(0, 1);
+  lcd.print("Score=" + String(level) + "/" + String(finalLevel));
+  delay(10000);
+  lcd.clear();
+  lcd.print("Reset To");
+  lcd.setCursor(0, 1);
+  lcd.print("Try Again :)");
+  while (true) {
+    void(); // To stop the program
+  }
+}
+
 void launchMainMenu() {
   lcd.clear();
   char text[] = "Press 1 to Play ";
@@ -227,7 +235,7 @@ void launchMainMenu() {
   lcd.autoscroll();
   for (int i = 0; i < sizeof(text) - 1; i++) {
     lcd.print(text[i]);
-    delay(250);
+    delay(150 );
   }
   lcd.noAutoscroll();
   char key = keypad.getKey();
@@ -420,10 +428,10 @@ void stuckInObstacle() { // Makes player stuck in an in-between obstacle
       touchObstacle();
       break;
     case 3:
-      holdObstacle();
+      potentiometerObstacle();
       break;
     default:
-      potentiometerObstacle();
+      holdObstacle();
       break;
   }
 
@@ -442,12 +450,12 @@ void temperatureObstacle() { // The code segment that starts receiving the tempe
   }
 
   if (newTemperature - temperature > 0) {
-    lcd.print("RUB TO 5%");
+    lcd.print("RUB TO ");
     lcd.setCursor(0, 1);
     lcd.print("Change=" + String(newTemperature - initialTemperature) + "%");
     lcd.setCursor(0, 0);
 
-    if (newTemperature - initialTemperature > 4) {
+    if (newTemperature - initialTemperature >= 6) {
       currentlyInObstacle = false; // Reset to
       printedOnce = false; // Reset to print obstacle text
       temperature = 0;
@@ -557,7 +565,7 @@ void holdObstacle() { // Obstacle that checks for holding 3 buttons for X amount
   if (button1 == LOW && button2 == LOW && button3 == LOW) {
     lcd.clear();
     lcd.print("KEEP HOLDING");
-    delay(random(5000, 10000)); // Hold for a random amount of time between 5s and 10s
+    delay(random(2500, 5000)); // Hold for a random amount of time
     button1 = digitalRead(button1Pin);
     button2 = digitalRead(button2Pin);
     button3 = digitalRead(button3Pin);
@@ -578,110 +586,3 @@ void holdObstacle() { // Obstacle that checks for holding 3 buttons for X amount
     }
   }
 }
-
-// MICROPHONE DOES NOT WORK
-void microphoneObstacle() { // Obstacle that checks for a microphone sound
-  if (!secondPrintFlag) {
-    lcd.print("CLAP to MIC!!");
-    secondPrintFlag = true;
-  }
-  micInput = digitalRead(micPin); // Reads from microphone
-  if (micInput == LOW) { // Checks if sound is above threshold
-    lcd.clear();
-    lcd.print("CLAP DETECTED!");
-    delay(1500);
-  }
-
-
-
-}
-
-/*
-  namespace Calculator{
-  enum Operation{ADD, SUB, MUL, DIV, NOP};
-  class SimpleCalculator
-  {
-  public:
-
-    String input = "";
-    Operation op = NOP;
-    //Num num_state = NUM1;
-    int num1, num2;
-    bool next;
-    void do_op(){
-      switch(op){
-        case ADD:
-          num1 = num1+num2;
-          break;
-        case SUB:
-          num1 = num1-num2;
-          break;
-        case MUL:
-          num1 = num1*num2;
-          break;
-        case DIV:
-          num1 = num1/num2;
-          break;
-      }
-      op = NOP;
-      num2 = 0;
-      input = String(num1);
-    }
-    void clean(){
-      num1 = num2 = 0;
-      input = "";
-      op = NOP;
-    }
-    void store(int which){
-      switch(which){
-        case 1:
-          num1 = input.toInt();
-          break;
-        case 2:
-          num2 = input.toInt();
-          break;
-      }
-    }
-
-  };
-
-  }
-
-  Calculator::SimpleCalculator my_calc;
-
-  void perform_operation(Calculator::Operation Op){
-  if(Op == Calculator::NOP){
-    my_calc.store(2);
-    lcd.clear();
-    my_calc.do_op();
-    lcd.print(my_calc.input);
-    my_calc.next = true;
-  }
-  if (my_calc.op != Calculator::NOP){
-    my_calc.store(2);
-    lcd.clear();
-    my_calc.do_op();
-    lcd.print(my_calc.input);
-
-    my_calc.op = Op;
-    my_calc.next = true;
-  }
-  else{
-    my_calc.store(1);
-    my_calc.op = Op;
-    my_calc.next = true;
-  }
-
-  }
-
-  void num_press(char num){
-  if(my_calc.next == true){
-      lcd.clear();
-      my_calc.input = "";
-      my_calc.next = false;
-  }
-  lcd.write(num);
-  my_calc.input += num;
-  }
-  // ----------------------------
-*/
